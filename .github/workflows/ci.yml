@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20, 22]
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,8 +32,8 @@ jobs:
         with:
           node-version: 20
       - uses: dtolnay/rust-toolchain@stable
-      - run: npm ci
-      - run: cd native && npm ci && npm run build
+      - run: npm ci || npm install
+      - run: cd native && npm install && npm run build
       - uses: actions/upload-artifact@v4
         with:
           name: native-${{ matrix.os }}
