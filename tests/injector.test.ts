@@ -123,3 +123,79 @@ describe("PopBrowserInjector.maskedCard", () => {
     expect(PopBrowserInjector.maskedCard("1234")).toBe("****-****-****-1234");
   });
 });
+
+// ---------------------------------------------------------------------------
+// fillBillingFields filling order
+// ---------------------------------------------------------------------------
+describe("PopBrowserInjector - fillBillingFields Execution Order", () => {
+  it("should fill all input fields before any select fields", async () => {
+    // The actual constructor in injector.ts is (cdpUrl, headless)
+    const injector = new PopBrowserInjector("http://localhost:9222");
+
+    // Track the order of fill operations and their detected tag types
+    const fillOrder: Array<{ type: string; field: string }> = [];
+
+    // BillingInfo with all fields. 
+    // We leave phone fields empty to verify the core Round 1/2 logic specifically.
+    const billingInfo = {
+      firstName: "John",
+      lastName: "Doe",
+      street: "123 Main St",
+      city: "San Francisco",
+      state: "CA",
+      country: "US",
+      zip: "94105",
+      email: "john@example.com",
+      phone: "",
+      phoneCountryCode: "",
+    };
+
+    const mockClient = {
+      send: async (method: string, params: any) => {
+        if (method === "Runtime.evaluate") {
+          const expr: string = params.expression;
+
+          // 1. Detection phase: both in fillBillingFields and fillBillingField helper
+          if (expr.includes("tagName.toLowerCase()")) {
+            // According to the requirement: state/country return "select", others return "input"
+            const isSelect = expr.includes("state") || expr.includes("country");
+            return { result: { value: isSelect ? "select" : "input" } };
+          }
+
+          // 2. Filling phase: detect if selectOption or fillInputViaEval is called
+          // selectOption contains 'el.options', fillInputViaEval does not
+          if (expr.includes("nativeSetter")) {
+            const isSelectFill = expr.includes("el.options");
+            fillOrder.push({
+              type: isSelectFill ? "select" : "input",
+              field: expr.substring(0, 50),
+            });
+            return { result: { value: true } };
+          }
+        }
+        return { result: { value: true } };
+      },
+      close: () => {},
+    };
+
+    // fillBillingFields is private, access via any
+    await (injector as any).fillBillingFields(mockClient, billingInfo);
+
+    // Verify: all 'input' entries must appear before any 'select' entries
+    let foundSelect = false;
+    for (const entry of fillOrder) {
+      if (entry.type === "select") {
+        foundSelect = true;
+      } else if (entry.type === "input") {
+        if (foundSelect) {
+          throw new Error(`Found input field filled after select field: ${entry.field}`);
+        }
+      }
+    }
+
+    // Ensure we actually tested both types
+    expect(fillOrder.length).toBeGreaterThan(0);
+    expect(fillOrder.some((f) => f.type === "input")).toBe(true);
+    expect(fillOrder.some((f) => f.type === "select")).toBe(true);
+  });
+});

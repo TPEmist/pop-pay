@@ -1028,21 +1028,78 @@ export class PopBrowserInjector {
       else failed.push(`${name} (value='${value}')`);
     };
 
-    await tryFill(FIRST_NAME_SELECTORS, info.firstName, "first_name");
-    await tryFill(LAST_NAME_SELECTORS, info.lastName, "last_name");
+    // Fill ORDER matters: input fields first, then select dropdowns last.
+    // Reason: filling inputs can trigger framework re-renders (React, Zoho)
+    // which reset previously selected dropdowns. Selects go last to survive.
+
+    const fieldConfigs: Array<{ selectors: string[]; value: string; name: string }> = [
+      { selectors: FIRST_NAME_SELECTORS, value: info.firstName, name: "first_name" },
+      { selectors: LAST_NAME_SELECTORS, value: info.lastName, name: "last_name" },
+      { selectors: STREET_SELECTORS, value: info.street, name: "street" },
+      { selectors: CITY_SELECTORS, value: info.city, name: "city" },
+      { selectors: STATE_SELECTORS, value: state, name: "state" },
+      { selectors: COUNTRY_SELECTORS, value: info.country, name: "country" },
+      { selectors: ZIP_SELECTORS, value: info.zip, name: "zip" },
+      { selectors: EMAIL_SELECTORS, value: info.email, name: "email" },
+    ];
 
     // Full name fallback
     if (info.firstName || info.lastName) {
       const fullName = [info.firstName, info.lastName].filter(Boolean).join(" ");
-      await tryFill(FULL_NAME_SELECTORS, fullName, "full_name");
+      fieldConfigs.push({ selectors: FULL_NAME_SELECTORS, value: fullName, name: "full_name" });
     }
 
-    await tryFill(STREET_SELECTORS, info.street, "street");
-    await tryFill(CITY_SELECTORS, info.city, "city");
-    await tryFill(STATE_SELECTORS, state, "state");
-    await tryFill(COUNTRY_SELECTORS, info.country, "country");
-    await tryFill(ZIP_SELECTORS, info.zip, "zip");
-    await tryFill(EMAIL_SELECTORS, info.email, "email");
+    // Detect tagName for each non-empty field
+    const detections: Array<{
+      selectors: string[];
+      value: string;
+      name: string;
+      tagName: string | null;
+    }> = [];
+
+    for (const config of fieldConfigs) {
+      if (!config.value) {
+        skipped.push(config.name);
+        continue;
+      }
+      let tagName: string | null = null;
+      try {
+        const allSelector = config.selectors.join(", ");
+        const { result } = await client.send("Runtime.evaluate", {
+          expression: `
+            (function() {
+              const el = document.querySelector(${JSON.stringify(allSelector)});
+              return el ? el.tagName.toLowerCase() : null;
+            })()
+          `,
+          returnByValue: true,
+        });
+        tagName = result?.value || null;
+      } catch {
+        // Detection failed — treat as input (non-select)
+      }
+      detections.push({ ...config, tagName });
+    }
+
+    const doFill = async (d: { selectors: string[]; value: string; name: string }) => {
+      const ok = await this.fillBillingField(client, d.selectors, d.value, d.name);
+      if (ok) filled.push(d.name);
+      else failed.push(`${d.name} (value='${d.value}')`);
+    };
+
+    // Round 1: fill all non-select fields (inputs, textareas, etc.)
+    for (const d of detections) {
+      if (d.tagName !== "select") {
+        await doFill(d);
+      }
+    }
+
+    // Round 2: fill all select dropdowns (survive re-renders)
+    for (const d of detections) {
+      if (d.tagName === "select") {
+        await doFill(d);
+      }
+    }
 
     // Phone: country code dropdown first, then number
     let ccFilled = false;
