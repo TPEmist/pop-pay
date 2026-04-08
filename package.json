@@ -24,6 +24,8 @@
     "guardrail",
     "security",
     "mcp",
+    "mcp-server",
+    "model-context-protocol",
     "virtual-card",
     "cdp",
     "browser-automation",
