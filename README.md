@@ -1,3 +1,5 @@
+[![npm version](https://img.shields.io/npm/v/pop-pay.svg)](https://www.npmjs.com/package/pop-pay) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) [![CI](https://github.com/TPEmist/pop-pay/actions/workflows/ci.yml/badge.svg)](https://github.com/TPEmist/pop-pay/actions/workflows/ci.yml)
+
 <p align="center">
     <picture>
         <img src="https://raw.githubusercontent.com/TPEmist/Point-One-Percent/main/project_banner.png" alt="Point One Percent (AgentPay)" width="800">
@@ -215,6 +217,74 @@ Agent: "Let me retry buying compute... the previous attempt failed again."
 [Tool Call] request_virtual_card(amount=50.0, vendor="AWS", reasoning="failed again, retry loop")
 [POP] Payment rejected. Reason: Hallucination or infinite loop detected in reasoning
 ```
+
+---
+
+## Setup
+
+### Claude Code
+
+```bash
+claude mcp add pop-pay -- npx -y pop-pay launch-mcp
+```
+
+### Cursor
+
+Config file: `~/.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "pop-pay": {
+      "command": "npx",
+      "args": ["-y", "pop-pay", "launch-mcp"],
+      "env": {
+        "POP_CDP_URL": "http://localhost:9222"
+      }
+    }
+  }
+}
+```
+
+### Windsurf
+
+Config file: `~/.codeium/windsurf/mcp_config.json`
+
+```json
+{
+  "mcpServers": {
+    "pop-pay": {
+      "command": "npx",
+      "args": ["-y", "pop-pay", "launch-mcp"],
+      "env": {
+        "POP_CDP_URL": "http://localhost:9222"
+      }
+    }
+  }
+}
+```
+
+### VS Code (Copilot)
+
+Config file: `.vscode/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "pop-pay": {
+      "command": "npx",
+      "args": ["-y", "pop-pay", "launch-mcp"],
+      "env": {
+        "POP_CDP_URL": "http://localhost:9222"
+      }
+    }
+  }
+}
+```
+
+### OpenClaw / NemoClaw
+
+pop-pay works as an MCP tool with OpenClaw and NemoClaw. See the [Integration Guide §4](./docs/INTEGRATION_GUIDE.md) for detailed setup instructions and System Prompt templates.
 
 ---
 
