@@ -179,7 +179,7 @@ print('OK')
 // ---------------------------------------------------------------------------
 // Wire format validation
 // ---------------------------------------------------------------------------
-describe("Vault wire format compatibility", () => {
+describe.skipIf(!PYTHON_AVAILABLE)("Vault wire format compatibility", () => {
   it("TS blob has correct structure: nonce(12) + ciphertext + tag(16)", () => {
     const blob = encryptCredentials(TEST_CREDS, undefined, TEST_KEY);
     expect(blob.length).toBeGreaterThan(28);
