@@ -13,21 +13,24 @@ The runtime security layer for AI agent commerce. Card credentials are injected 
 
 ## Getting Started
 
-### Claude Code
+### 1. Initialize the credential vault
 
 ```bash
-claude mcp add --scope user pop-pay -- npx -y pop-pay launch-mcp
+npx -y pop-pay pop-init-vault
 ```
 
-`--scope user` makes it available across all projects. Use `--scope local` (default) to limit to the current directory.
+This encrypts your card credentials into `~/.config/pop-pay/vault.enc` (AES-256-GCM). The MCP server decrypts automatically at startup.
 
-To remove: `claude mcp remove pop-pay`
+For stronger protection (recommended — blocks agents with shell access):
 
-### Other MCP Clients
+```bash
+npx -y pop-pay pop-init-vault --passphrase   # one-time setup
+npx -y pop-pay pop-unlock                     # run once before each session
+```
 
-[<img src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20MCP%20Server&color=0098FF" alt="Install in VS Code">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img alt="Install in VS Code Insiders" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20MCP%20Server&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img src="https://img.shields.io/badge/Cursor-Cursor?style=flat-square&label=Install%20MCP%20Server&color=5C2D91" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=pop-pay&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInBvcC1wYXkiLCJsYXVuY2gtbWNwIl0sImVudiI6eyJQT1BfQ0RQX1VSTCI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTIyMiJ9fQ==)
+### 2. Add to your MCP client
 
-Add to your MCP client config (Cursor, Windsurf, VS Code, etc.):
+Standard config for any MCP-compatible client:
 
 ```json
 {
@@ -43,9 +46,23 @@ Add to your MCP client config (Cursor, Windsurf, VS Code, etc.):
 }
 ```
 
-<details>
-<summary>Config file locations per client</summary>
+[<img src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20MCP%20Server&color=0098FF" alt="Install in VS Code">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img alt="Install in VS Code Insiders" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20MCP%20Server&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img src="https://img.shields.io/badge/Cursor-Cursor?style=flat-square&label=Install%20MCP%20Server&color=5C2D91" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=pop-pay&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInBvcC1wYXkiLCJsYXVuY2gtbWNwIl0sImVudiI6eyJQT1BfQ0RQX1VSTCI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTIyMiJ9fQ==)
 
+<details>
+<summary>Claude Code</summary>
+
+```bash
+claude mcp add --scope user pop-pay -- npx -y pop-pay launch-mcp
+```
+
+`--scope user` makes it available across all projects. To remove: `claude mcp remove pop-pay`
+
+</details>
+
+<details>
+<summary>Cursor / Windsurf / VS Code</summary>
+
+Add the standard config above to:
 - **Cursor**: `~/.cursor/mcp.json`
 - **Windsurf**: `~/.codeium/windsurf/mcp_config.json`
 - **VS Code (Copilot)**: `.vscode/mcp.json` in project root
@@ -55,7 +72,11 @@ Add to your MCP client config (Cursor, Windsurf, VS Code, etc.):
 <details>
 <summary>OpenClaw / NemoClaw</summary>
 
-Compatible with any MCP host. See the [Integration Guide](./docs/INTEGRATION_GUIDE.md) for setup instructions and System Prompt templates.
+```bash
+openclaw mcp add pop-pay -- npx -y pop-pay launch-mcp
+```
+
+See the [Integration Guide §4](./docs/INTEGRATION_GUIDE.md) for System Prompt templates.
 
 </details>
 
@@ -66,26 +87,17 @@ Compatible with any MCP host. See the [Integration Guide](./docs/INTEGRATION_GUI
 docker-compose up -d
 ```
 
-Runs the MCP server + headless Chromium with CDP. Mount your encrypted vault from the host. See `docker-compose.yml` for configuration.
+Runs the MCP server + headless Chromium with CDP. Mount your encrypted vault from the host.
 
 </details>
 
-## Vault Setup
-
-Credentials are stored in an AES-256-GCM encrypted vault — plaintext card data never touches disk.
+### 3. Launch Chrome with CDP and start using
 
 ```bash
-npx pop-init-vault
+npx -y pop-pay pop-launch
 ```
 
-**Passphrase mode** (recommended — protects against agents with shell access):
-
-```bash
-npx pop-init-vault --passphrase   # one-time setup
-npx pop-unlock                     # run once before each MCP session
-```
-
-`pop-unlock` derives the key from your passphrase and stores it in the OS keyring. The MCP server reads it automatically at startup.
+Restart your MCP client. The agent now has access to pop-pay's MCP tools.
 
 ## MCP Tools
 
