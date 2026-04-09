@@ -197,7 +197,7 @@ function ssrfValidateUrl(url: string): string | null {
 }
 
 // MCP Server
-const server = new McpServer({ name: "pop-pay", version: "0.1.0" });
+const server = new McpServer({ name: "pop-pay", version: "0.3.3" });
 
 server.tool(
   "request_virtual_card",
@@ -334,6 +334,45 @@ server.tool(
     reasoning: z.string().optional().describe("Why billing info is needed"),
   },
   async ({ target_vendor, page_url, reasoning }) => {
+    // Security scan (same pattern as request_virtual_card)
+    let scanNote = "";
+    if (page_url) {
+      const cached = snapshotCache.get(page_url);
+      let scanResult;
+      if (cached && Date.now() - cached.timestamp.getTime() < 5 * 60 * 1000) {
+        scanResult = {
+          flags: cached.flags,
+          snapshotId: cached.snapshotId,
+          safe: !cached.flags.includes("hidden_instructions_detected"),
+          error: null,
+        };
+      } else {
+        scanResult = await scanPage(page_url);
+      }
+      if (scanResult.error) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Billing rejected. Security scan failed: ${scanResult.error} Snapshot ID: ${scanResult.snapshotId}.`,
+            },
+          ],
+        };
+      }
+      if (!scanResult.safe) {
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Billing rejected. Security scan detected hidden prompt injection. Snapshot ID: ${scanResult.snapshotId}. Flags: ${scanResult.flags.join(", ")}. Do not retry.`,
+            },
+          ],
+        };
+      }
+    } else {
+      scanNote = " (security scan skipped — no page_url provided)";
+    }
+
     const pageDomain = page_url
       ? new URL(page_url).hostname.toLowerCase().replace(/^www\./, "")
       : "";
@@ -445,36 +484,6 @@ server.tool(
           text: `x402 payment approved (STUBBED). seal_id=${seal.sealId}, amount=$${amount.toFixed(2)}, service_url=${service_url}. Note: actual x402 blockchain payment is not yet implemented.`,
         },
       ],
-    };
-  }
-);
-
-server.tool(
-  "page_snapshot",
-  "Capture a security snapshot of a checkout page. Scans for hidden prompt injections, price mismatches, and redirect anomalies. Call before request_virtual_card to pre-validate checkout safety.",
-  {
-    page_url: z.string().describe("The checkout page URL to scan (must be https://)"),
-  },
-  async ({ page_url }) => {
-    const scanResult = await scanPage(page_url);
-    if (scanResult.error) {
-      return {
-        content: [{
-          type: "text" as const,
-          text: `Snapshot failed: ${scanResult.error} Snapshot ID: ${scanResult.snapshotId}.`,
-        }],
-      };
-    }
-
-    const flagsSummary = scanResult.flags.length > 0
-      ? `Flags: ${scanResult.flags.join(", ")}.`
-      : "No flags detected.";
-
-    return {
-      content: [{
-        type: "text" as const,
-        text: `Page snapshot complete. Safe: ${scanResult.safe}. ${flagsSummary} Snapshot ID: ${scanResult.snapshotId}.`,
-      }],
     };
   }
 );

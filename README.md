@@ -109,10 +109,9 @@ Restart your MCP client. The agent now has access to pop-pay's MCP tools.
 
 | Tool | Description |
 |:---|:---|
-| `request_virtual_card` | Issue a virtual card and inject credentials into the checkout page via CDP. |
-| `request_purchaser_info` | Auto-fill billing/contact info (name, address, email, phone). |
+| `request_virtual_card` | Issue a virtual card and inject credentials into the checkout page via CDP. Automatically scans the page for hidden prompt injections. |
+| `request_purchaser_info` | Auto-fill billing/contact info (name, address, email, phone). Automatically scans the page for hidden prompt injections. |
 | `request_x402_payment` | Pay for API calls via the x402 HTTP payment protocol. |
-| `page_snapshot` | Scan a checkout page for hidden prompt injections or anomalies. |
 
 > **Tip for Claude Code users:** Add the following to your project's `CLAUDE.md` to help the agent know when to call pop-pay:
 > *"When you encounter a payment form or checkout page, use the `request_virtual_card` tool. For billing/contact info forms, use `request_purchaser_info` first."*

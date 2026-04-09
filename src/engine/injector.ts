@@ -680,16 +680,25 @@ export class PopBrowserInjector {
     expiry: string,
     cvv: string
   ): Promise<boolean> {
+    // Track each field independently — Stripe splits fields across sibling iframes
     let cardFilled = false;
+    let expiryFilled = false;
+    let cvvFilled = false;
 
     // Get frame tree
     const { frameTree } = await client.send("Page.getFrameTree");
 
-    // Process main frame
-    const mainFilled = await this.fillCardInContext(client, undefined, cardNumber, expiry, cvv);
-    if (mainFilled) cardFilled = true;
+    const merge = (r: { card: boolean; expiry: boolean; cvv: boolean }) => {
+      if (r.card) cardFilled = true;
+      if (r.expiry) expiryFilled = true;
+      if (r.cvv) cvvFilled = true;
+    };
 
-    // Process child frames (iframes)
+    // Process main frame
+    merge(await this.fillCardInContext(client, undefined, cardNumber, expiry, cvv));
+
+    // Process child frames (iframes) — keep going even after card found
+    // (expiry/CVV may be in sibling iframes, common in Stripe's multi-iframe layout)
     const processFrame = async (tree: CDPFrameTree) => {
       if (tree.childFrames) {
         for (const child of tree.childFrames) {
@@ -699,14 +708,13 @@ export class PopBrowserInjector {
               "Page.createIsolatedWorld",
               { frameId: child.frame.id, worldName: "pop-pay-injector" }
             );
-            const filled = await this.fillCardInContext(
+            merge(await this.fillCardInContext(
               client,
               executionContextId,
               cardNumber,
               expiry,
               cvv
-            );
-            if (filled) cardFilled = true;
+            ));
           } catch {
             // Cross-origin frame access may fail — continue
           }
@@ -716,9 +724,11 @@ export class PopBrowserInjector {
     };
     await processFrame(frameTree);
 
-    // Shadow DOM piercing: search for shadow roots in main frame
-    const shadowFilled = await this.fillCardInShadowDom(client, cardNumber, expiry, cvv);
-    if (shadowFilled) cardFilled = true;
+    // Shadow DOM piercing: fallback if card not found in any frame
+    if (!cardFilled) {
+      const shadowFilled = await this.fillCardInShadowDom(client, cardNumber, expiry, cvv);
+      if (shadowFilled) cardFilled = true;
+    }
 
     return cardFilled;
   }
@@ -787,25 +797,22 @@ export class PopBrowserInjector {
     cardNumber: string,
     expiry: string,
     cvv: string
-  ): Promise<boolean> {
+  ): Promise<{ card: boolean; expiry: boolean; cvv: boolean }> {
     const evalOpts: Record<string, unknown> = contextId !== undefined
       ? { contextId }
       : {};
 
-    // Try to fill card number
+    // Try each field independently — Stripe uses separate iframes per field
     const cardSelector = CARD_NUMBER_SELECTORS.join(", ");
-    const cardFilled = await this.fillInputViaEval(client, evalOpts, cardSelector, cardNumber);
-    if (!cardFilled) return false;
+    const card = await this.fillInputViaEval(client, evalOpts, cardSelector, cardNumber);
 
-    // Fill expiry
     const expirySelector = EXPIRY_SELECTORS.join(", ");
-    await this.fillInputViaEval(client, evalOpts, expirySelector, expiry);
+    const exp = await this.fillInputViaEval(client, evalOpts, expirySelector, expiry);
 
-    // Fill CVV
     const cvvSelector = CVV_SELECTORS.join(", ");
-    await this.fillInputViaEval(client, evalOpts, cvvSelector, cvv);
+    const cvvFilled = await this.fillInputViaEval(client, evalOpts, cvvSelector, cvv);
 
-    return true;
+    return { card, expiry: exp, cvv: cvvFilled };
   }
 
   // ------------------------------------------------------------------

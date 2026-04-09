@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] - 2026-04-09
+
+### Fixed
+- Card injection in Stripe multi-iframe layouts (Zoho Checkout). Fields are now filled independently across sibling iframes instead of requiring all fields in a single frame.
+
+### Changed
+- Removed `page_snapshot` as standalone MCP tool. Security scan is now automatically embedded in `request_virtual_card` and `request_purchaser_info`.
+- MCP server exposes 3 tools (was 4): `request_virtual_card`, `request_purchaser_info`, `request_x402_payment`.
+
 ## [0.2.0] - 2026-04-05
 
 ### Added
