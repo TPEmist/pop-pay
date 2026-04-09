@@ -114,6 +114,9 @@ Restart your MCP client. The agent now has access to pop-pay's MCP tools.
 | `request_x402_payment` | Pay for API calls via the x402 HTTP payment protocol. |
 | `page_snapshot` | Scan a checkout page for hidden prompt injections or anomalies. |
 
+> **Tip for Claude Code users:** Add the following to your project's `CLAUDE.md` to help the agent know when to call pop-pay:
+> *"When you encounter a payment form or checkout page, use the `request_virtual_card` tool. For billing/contact info forms, use `request_purchaser_info` first."*
+
 ## Configuration
 
 Core variables in `~/.config/pop-pay/.env`. See [ENV_REFERENCE.md](./docs/ENV_REFERENCE.md) for the full list.

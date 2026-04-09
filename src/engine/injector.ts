@@ -512,7 +512,7 @@ export class PopBrowserInjector {
 
       // Fill billing fields
       if (hasBilling) {
-        const billingResult = await this.fillBillingFields(client, billingInfo);
+        const billingResult = await this.fillBillingAcrossFrames(client, billingInfo);
         result.billingFilled = billingResult.filled.length > 0;
         result.billingDetails = billingResult;
       }
@@ -562,7 +562,7 @@ export class PopBrowserInjector {
       await client.send("Runtime.enable");
       await client.send("DOM.enable");
 
-      const billingResult = await this.fillBillingFields(client, billingInfo);
+      const billingResult = await this.fillBillingAcrossFrames(client, billingInfo);
       result.billingFilled = billingResult.filled.length > 0;
       result.billingDetails = billingResult;
 
@@ -721,6 +721,61 @@ export class PopBrowserInjector {
     if (shadowFilled) cardFilled = true;
 
     return cardFilled;
+  }
+
+  // ------------------------------------------------------------------
+  // Internal: fill billing fields across all frames (iframes)
+  // ------------------------------------------------------------------
+  private async fillBillingAcrossFrames(
+    client: CDPClient,
+    info: BillingInfo
+  ): Promise<{ filled: string[]; failed: string[]; skipped: string[] }> {
+    const result = {
+      filled: [] as string[],
+      failed: [] as string[],
+      skipped: [] as string[],
+    };
+
+    const merge = (frameResult: { filled: string[]; failed: string[]; skipped: string[] }) => {
+      result.filled.push(...frameResult.filled);
+      result.failed.push(...frameResult.failed);
+      result.skipped.push(...frameResult.skipped);
+    };
+
+    // Try main frame first
+    merge(await this.fillBillingFields(client, info, {}));
+
+    // Get frame tree
+    const { frameTree } = await client.send("Page.getFrameTree");
+
+    // Process child frames (iframes)
+    const processFrame = async (tree: CDPFrameTree) => {
+      if (tree.childFrames) {
+        for (const child of tree.childFrames) {
+          try {
+            // Create isolated world for cross-origin iframe access
+            const { executionContextId } = await client.send(
+              "Page.createIsolatedWorld",
+              { frameId: child.frame.id, worldName: "pop-pay-billing-injector" }
+            );
+            merge(await this.fillBillingFields(client, info, { contextId: executionContextId }));
+          } catch {
+            // Cross-origin frame access may fail — continue
+          }
+          await processFrame(child);
+        }
+      }
+    };
+    await processFrame(frameTree);
+
+    // Deduplicate: if a field was filled in any frame, remove from failed/skipped
+    result.filled = [...new Set(result.filled)];
+    result.failed = result.failed.filter(
+      (f) => !result.filled.some((filled) => f.startsWith(filled))
+    );
+    result.skipped = result.skipped.filter((s) => !result.filled.includes(s));
+
+    return result;
   }
 
   // ------------------------------------------------------------------
@@ -965,6 +1020,7 @@ export class PopBrowserInjector {
   // ------------------------------------------------------------------
   private async fillBillingField(
     client: CDPClient,
+    evalOpts: Record<string, unknown>,
     selectors: string[],
     value: string,
     fieldName: string
@@ -983,14 +1039,15 @@ export class PopBrowserInjector {
           })()
         `,
         returnByValue: true,
+        ...evalOpts,
       });
 
       if (!result?.value) return false;
 
       if (result.value === "select") {
-        return await this.selectOption(client, {}, allSelector, value);
+        return await this.selectOption(client, evalOpts, allSelector, value);
       } else {
-        return await this.fillInputViaEval(client, {}, allSelector, value);
+        return await this.fillInputViaEval(client, evalOpts, allSelector, value);
       }
     } catch {
       return false;
@@ -1002,7 +1059,8 @@ export class PopBrowserInjector {
   // ------------------------------------------------------------------
   private async fillBillingFields(
     client: CDPClient,
-    info: BillingInfo
+    info: BillingInfo,
+    evalOpts: Record<string, unknown>
   ): Promise<{ filled: string[]; failed: string[]; skipped: string[] }> {
     const filled: string[] = [];
     const failed: string[] = [];
@@ -1023,7 +1081,7 @@ export class PopBrowserInjector {
         skipped.push(name);
         return;
       }
-      const ok = await this.fillBillingField(client, selectors, value, name);
+      const ok = await this.fillBillingField(client, evalOpts, selectors, value, name);
       if (ok) filled.push(name);
       else failed.push(`${name} (value='${value}')`);
     };
@@ -1073,6 +1131,7 @@ export class PopBrowserInjector {
             })()
           `,
           returnByValue: true,
+          ...evalOpts,
         });
         tagName = result?.value || null;
       } catch {
@@ -1082,7 +1141,7 @@ export class PopBrowserInjector {
     }
 
     const doFill = async (d: { selectors: string[]; value: string; name: string }) => {
-      const ok = await this.fillBillingField(client, d.selectors, d.value, d.name);
+      const ok = await this.fillBillingField(client, evalOpts, d.selectors, d.value, d.name);
       if (ok) filled.push(d.name);
       else failed.push(`${d.name} (value='${d.value}')`);
     };
@@ -1106,6 +1165,7 @@ export class PopBrowserInjector {
     if (info.phoneCountryCode) {
       ccFilled = await this.fillBillingField(
         client,
+        evalOpts,
         PHONE_COUNTRY_CODE_SELECTORS,
         info.phoneCountryCode,
         "phone_country_code"
