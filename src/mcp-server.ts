@@ -332,7 +332,7 @@ async function scanPage(pageUrl: string): Promise<{
 }
 
 // MCP Server
-const server = new McpServer({ name: "pop-pay", version: "0.3.3" });
+const server = new McpServer({ name: "pop-pay", version: "0.4.0" });
 
 server.tool(
   "request_virtual_card",
