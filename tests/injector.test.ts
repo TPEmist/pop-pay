@@ -150,23 +150,7 @@ describe("PopBrowserInjector - fillBillingFields Execution Order", () => {
       phoneCountryCode: "",
     };
 
-    const mockPage = {
-      mainFrame: () => mockPage,
-      getByLabel: () => ({ count: async () => 0 }),
-      evaluate: async (fn: any, ...args: any[]) => {
-        // Handle tagName detection
-        if (typeof fn === 'function' && fn.toString().includes('tagName.toLowerCase()')) {
-          const selectors = args[0];
-          const isSelect = selectors.some((s: string) => s.includes('state') || s.includes('country'));
-          return isSelect ? 'select' : 'input';
-        }
-        return null;
-      },
-      content: async () => "",
-      url: () => "",
-    };
-
-    const mockFrame = {
+    const mockFrame: any = {
       locator: (selector: string) => ({
         first: () => ({
           count: async () => 1,
@@ -199,7 +183,11 @@ describe("PopBrowserInjector - fillBillingFields Execution Order", () => {
       })
     };
 
-    (mockPage as any).mainFrame = () => mockFrame;
+    const mockPage = {
+      frames: () => [mockFrame],
+      mainFrame: () => mockFrame,
+      getByLabel: () => ({ count: async () => 0 }),
+    };
 
     // fillBillingFields is private, access via any
     await (injector as any).fillBillingFields(mockPage, billingInfo);

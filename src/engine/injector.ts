@@ -718,9 +718,12 @@ export class PopBrowserInjector {
       }
     } catch {}
 
-    // Strategy 2: CSS selectors
-    const frame = page.mainFrame();
-    const locator = await this.findVisibleLocator(frame, selectors);
+    // Strategy 2: CSS selectors — search ALL frames (including iframes)
+    let locator: Locator | null = null;
+    for (const frame of page.frames()) {
+      locator = await this.findVisibleLocator(frame, selectors);
+      if (locator) break;
+    }
     if (!locator) return false;
 
     try {
