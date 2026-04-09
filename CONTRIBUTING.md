@@ -56,7 +56,7 @@ npm run lint
 
 `pop-pay` is structured into several key layers:
 - **MCP Server**: The interface for AI agents (Claude Code, OpenHands, etc.).
-- **CDP Injection Engine**: Uses Chrome DevTools Protocol to traverse the DOM (including iframes and Shadow DOM) and inject credentials directly.
+- **Playwright Injection Engine**: Uses Playwright's `connectOverCDP` to traverse cross-origin iframes (including Stripe sandboxed iframes) and Shadow DOM trees, injecting credentials directly.
 - **Guardrails**: Hybrid Keyword + LLM logic to evaluate purchase intent and block hallucinations.
 - **Vault**: AES-256-GCM encrypted storage for BYOC credentials.
 - **Native Layer**: Rust-based (napi-rs) for secure key derivation and salt handling.
@@ -66,7 +66,7 @@ npm run lint
 We are specifically looking for help in the following areas:
 - **New Payment Providers**: Implementations for more virtual card issuers (e.g., Marqeta, Airwallex).
 - **Guardrail Improvements**: Better semantic analysis to catch subtle prompt injections.
-- **CDP Resilience**: Enhancing the injection engine to handle more complex or obfuscated checkout forms.
+- **Injection Resilience**: Enhancing the Playwright-based engine to handle more complex or obfuscated checkout forms.
 - **Checkout Coverage**: Adding more "known processors" to `src/engine/known-processors.ts`.
 - **Documentation**: Improving guides, adding examples, and translating docs.
 

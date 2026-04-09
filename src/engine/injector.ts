@@ -12,6 +12,19 @@ import { chromium, type Browser, type Page, type Frame, type Locator } from "pla
 import { KNOWN_PAYMENT_PROCESSORS } from "./known-processors.js";
 
 // ---------------------------------------------------------------------------
+// Structured logger
+// ---------------------------------------------------------------------------
+const LOG_LEVEL = (process.env.POP_LOG_LEVEL ?? "info").toLowerCase();
+const LEVELS: Record<string, number> = { debug: 0, info: 1, warn: 2, error: 3 };
+
+function log(level: "debug" | "info" | "warn" | "error", msg: string, data?: Record<string, unknown>) {
+  if ((LEVELS[level] ?? 1) < (LEVELS[LOG_LEVEL] ?? 1)) return;
+  const entry = { ts: new Date().toISOString(), level, component: "PopBrowserInjector", msg, ...data };
+  const out = level === "error" ? process.stderr : process.stderr;
+  out.write(JSON.stringify(entry) + "\n");
+}
+
+// ---------------------------------------------------------------------------
 // ISO 3166-1 alpha-2 -> E.164 dial prefix
 // ---------------------------------------------------------------------------
 const COUNTRY_DIAL_CODES: Record<string, string> = {
@@ -435,7 +448,7 @@ export class PopBrowserInjector {
 
       return result;
     } catch (err: any) {
-      console.error(`PopBrowserInjector error: ${err.message}`);
+      log("error", "injection failed", { error: err.message });
       return result;
     } finally {
       await this.close();
@@ -470,7 +483,7 @@ export class PopBrowserInjector {
 
       return result;
     } catch (err: any) {
-      console.error(`PopBrowserInjector billing error: ${err.message}`);
+      log("error", "billing injection failed", { error: err.message });
       return result;
     } finally {
       await this.close();
@@ -498,7 +511,7 @@ export class PopBrowserInjector {
 
       return { url: pageUrl, title, html, frames };
     } catch (err: any) {
-      console.error(`PopBrowserInjector snapshot error: ${err.message}`);
+      log("error", "snapshot failed", { error: err.message });
       return null;
     } finally {
       await this.close();
@@ -543,7 +556,9 @@ export class PopBrowserInjector {
 
     for (const frame of allFrames) {
       try {
+        log("debug", "scanning frame", { frameUrl: frame.url() });
         if (await this.fillInFrame(frame, cardNumber, expiry, cvv)) {
+          log("info", "card fields filled in frame", { frameUrl: frame.url() });
           cardFilled = true;
           // Keep going for expiry/CVV in sibling iframes (Stripe)
         }

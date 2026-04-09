@@ -29,3 +29,7 @@ export interface VirtualSeal {
   status: "Issued" | "Rejected" | "Revoked" | "Used" | "Pending";
   rejectionReason: string | null;
 }
+
+export function sealToString(seal: VirtualSeal): string {
+  return `VirtualSeal(sealId=${JSON.stringify(seal.sealId)}, status=${JSON.stringify(seal.status)}, cardNumber='****-REDACTED', cvv='***', authorizedAmount=${seal.authorizedAmount})`;
+}
