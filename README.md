@@ -13,7 +13,21 @@ The runtime security layer for AI agent commerce. Card credentials are injected 
 
 ## Getting Started
 
-Add pop-pay to your MCP client config:
+### Claude Code
+
+```bash
+claude mcp add --scope user pop-pay -- npx -y pop-pay launch-mcp
+```
+
+`--scope user` makes it available across all projects. Use `--scope local` (default) to limit to the current directory.
+
+To remove: `claude mcp remove pop-pay`
+
+### Other MCP Clients
+
+[<img src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20MCP%20Server&color=0098FF" alt="Install in VS Code">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img alt="Install in VS Code Insiders" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20MCP%20Server&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img src="https://img.shields.io/badge/Cursor-Cursor?style=flat-square&label=Install%20MCP%20Server&color=5C2D91" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=pop-pay&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInBvcC1wYXkiLCJsYXVuY2gtbWNwIl0sImVudiI6eyJQT1BfQ0RQX1VSTCI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTIyMiJ9fQ==)
+
+Add to your MCP client config (Cursor, Windsurf, VS Code, etc.):
 
 ```json
 {
@@ -22,58 +36,19 @@ Add pop-pay to your MCP client config:
       "command": "npx",
       "args": ["-y", "pop-pay", "launch-mcp"],
       "env": {
-        "POP_CDP_URL": "http://localhost:9222",
-        "POP_ALLOWED_CATEGORIES": "[\"aws\",\"cloudflare\"]",
-        "POP_MAX_PER_TX": "100.0",
-        "POP_MAX_DAILY": "500.0",
-        "POP_GUARDRAIL_ENGINE": "keyword"
+        "POP_CDP_URL": "http://localhost:9222"
       }
     }
   }
 }
 ```
 
-[<img src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20MCP%20Server&color=0098FF" alt="Install in VS Code">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img alt="Install in VS Code Insiders" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20MCP%20Server&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%257B%2522name%2522%253A%2522pop-pay%2522%252C%2522command%2522%253A%2522npx%2522%252C%2522args%2522%253A%255B%2522-y%2522%252C%2522pop-pay%2522%252C%2522launch-mcp%2522%255D%252C%2522env%2522%253A%257B%2522POP_CDP_URL%2522%253A%2522http%253A%252F%252Flocalhost%253A9222%2522%257D%257D) [<img src="https://img.shields.io/badge/Cursor-Cursor?style=flat-square&label=Install%20MCP%20Server&color=5C2D91" alt="Install in Cursor">](cursor://anysphere.cursor-deeplink/mcp/install?name=pop-pay&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsInBvcC1wYXkiLCJsYXVuY2gtbWNwIl0sImVudiI6eyJQT1BfQ0RQX1VSTCI6Imh0dHA6Ly9sb2NhbGhvc3Q6OTIyMiJ9fQ==)
-
 <details>
-<summary>Claude Code</summary>
+<summary>Config file locations per client</summary>
 
-```bash
-claude mcp add pop-pay -- npx -y pop-pay launch-mcp
-```
-
-With environment variables:
-
-```bash
-claude mcp add pop-pay \
-  -e POP_CDP_URL=http://localhost:9222 \
-  -e POP_ALLOWED_CATEGORIES='["aws","cloudflare"]' \
-  -e POP_MAX_PER_TX=100.0 \
-  -e POP_MAX_DAILY=500.0 \
-  -e POP_GUARDRAIL_ENGINE=keyword \
-  -- npx -y pop-pay launch-mcp
-```
-
-</details>
-
-<details>
-<summary>Cursor</summary>
-
-Add to `~/.cursor/mcp.json` using the standard config block above.
-
-</details>
-
-<details>
-<summary>Windsurf</summary>
-
-Add to `~/.codeium/windsurf/mcp_config.json` using the standard config block above.
-
-</details>
-
-<details>
-<summary>VS Code (Copilot)</summary>
-
-Add to `.vscode/mcp.json` in your project root using the standard config block above.
+- **Cursor**: `~/.cursor/mcp.json`
+- **Windsurf**: `~/.codeium/windsurf/mcp_config.json`
+- **VS Code (Copilot)**: `.vscode/mcp.json` in project root
 
 </details>
 
