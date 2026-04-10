@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 import { main } from "./dashboard.js";
+import path from "path";
+import os from "os";
+
+const DEFAULT_DB_PATH = path.join(os.homedir(), ".config", "pop-pay", "pop_state.db");
 
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     port: 3210,
-    dbPath: "pop_state.db"
+    dbPath: DEFAULT_DB_PATH
   };
 
   for (let i = 0; i < args.length; i++) {

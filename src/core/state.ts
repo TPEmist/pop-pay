@@ -1,13 +1,18 @@
 import Database from "better-sqlite3";
 import crypto from "crypto";
 import os from "os";
+import path from "path";
+import fs from "fs";
+
+const DEFAULT_DB_PATH = path.join(os.homedir(), ".config", "pop-pay", "pop_state.db");
 
 export class PopStateTracker {
   private db: Database.Database;
   private encryptionKey: Buffer;
   dailySpendTotal: number;
 
-  constructor(dbPath: string = "pop_state.db") {
+  constructor(dbPath: string = DEFAULT_DB_PATH) {
+    fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     this.db = new Database(dbPath);
     this.db.pragma("journal_mode = WAL");
     this.encryptionKey = this.deriveEncryptionKey();
