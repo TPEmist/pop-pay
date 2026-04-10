@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import os from "node:os";
 import { exec } from "node:child_process";
 import Database from "better-sqlite3";
+import { PopStateTracker } from "./core/state.js";
 
 export interface DashboardOptions {
   port: number;
@@ -13,26 +14,14 @@ export interface DashboardOptions {
 
 export async function main(options: DashboardOptions & { skipOpen?: boolean }) {
   const { port, dbPath, skipOpen } = options;
-  const db = new Database(dbPath);
 
-  // Initialize tables
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS daily_budget (
-      date TEXT PRIMARY KEY,
-      spent_amount REAL
-    )
-  `);
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS issued_seals (
-      seal_id TEXT PRIMARY KEY,
-      amount REAL,
-      vendor TEXT,
-      status TEXT,
-      masked_card TEXT,
-      expiration_date TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  // Delegate schema creation + migrations to the canonical tracker so
+  // dashboard and MCP server always agree on the schema, even if the
+  // dashboard is launched first against a legacy DB.
+  const bootTracker = new PopStateTracker(dbPath);
+  bootTracker.close();
+
+  const db = new Database(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS dashboard_settings (
       key TEXT PRIMARY KEY,
@@ -85,12 +74,13 @@ export async function main(options: DashboardOptions & { skipOpen?: boolean }) {
     if (method === "GET" && pathname === "/api/seals") {
       const searchParams = new URL(url!, `http://localhost:${port}`).searchParams;
       const statusFilter = searchParams.get("status");
-      
+
+      const columns = "seal_id, amount, vendor, status, masked_card, expiration_date, timestamp, rejection_reason";
       let seals: any[];
       if (statusFilter) {
-        seals = db.prepare("SELECT * FROM issued_seals WHERE LOWER(status) = LOWER(?) ORDER BY timestamp DESC").all(statusFilter);
+        seals = db.prepare(`SELECT ${columns} FROM issued_seals WHERE LOWER(status) = LOWER(?) ORDER BY timestamp DESC`).all(statusFilter);
       } else {
-        seals = db.prepare("SELECT * FROM issued_seals ORDER BY timestamp DESC").all();
+        seals = db.prepare(`SELECT ${columns} FROM issued_seals ORDER BY timestamp DESC`).all();
       }
 
       // Decrypt masked_card for display
@@ -118,6 +108,20 @@ export async function main(options: DashboardOptions & { skipOpen?: boolean }) {
 
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(seals));
+      return;
+    }
+
+    if (method === "GET" && pathname === "/api/audit") {
+      const searchParams = new URL(url!, `http://localhost:${port}`).searchParams;
+      let limit = parseInt(searchParams.get("limit") ?? "100", 10);
+      if (isNaN(limit) || limit <= 0) limit = 100;
+      const rows = db
+        .prepare(
+          "SELECT id, event_type, vendor, reasoning, timestamp FROM audit_log ORDER BY timestamp DESC, id DESC LIMIT ?"
+        )
+        .all(limit);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify(rows));
       return;
     }
 

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-10
+
+### Added
+- **`audit_log` table:** informational audit trail for MCP tool invocations. Every `request_purchaser_info` call now logs `event_type`, `vendor`, `reasoning`, and an ISO 8601 UTC timestamp. Non-blocking — failures to log never interrupt the main flow.
+- **Dashboard AUDIT_LOG section:** new table rendering `/api/audit` events (id, event_type, vendor, reasoning, timestamp).
+- **`PopStateTracker.recordAuditEvent()` / `.getAuditEvents()`:** public API for emitting and reading audit events.
+
+### Fixed
+- **Bug 1 — timestamps now ISO 8601 with `Z` suffix:** `issued_seals.timestamp` previously used SQLite `CURRENT_TIMESTAMP` which is ambiguous about timezone. New inserts use `new Date().toISOString()`. Legacy rows are migrated in-place on first open.
+- **Bug 2 — `rejection_reason` column now persisted:** dashboard REJECTION_LOG previously showed an empty REASON column. Root cause was two-fold: (a) `issued_seals` had no `rejection_reason` column; (b) `dashboard.js` `renderRejected()` didn't emit a REASON cell even though the HTML header declared one. Both fixed. All three rejection paths in `client.ts` now pass the reason through. Migration adds the column to legacy DBs.
+- **Bug 3 — dashboard "today spending" always $0 / utilization 0%:** Root cause (empirically verified, not hypothesized): `PopClient` constructor in `src/client.ts` defaulted `dbPath` to the relative string `"pop_state.db"`, so when the MCP server was launched from one working directory it wrote to `<cwd>/pop_state.db` while the dashboard read from `~/.config/pop-pay/pop_state.db` (the `PopStateTracker` default). `addSpend` was firing correctly — it was just writing to a file the dashboard never opened. Fix: drop the hardcoded default; when no `dbPath` is passed, construct `PopStateTracker` with no arg so both sides converge on `DEFAULT_DB_PATH`. Regression test added.
+- **Dashboard XSS hardening:** `dashboard.js` used to inject raw values (seal_id, vendor, rejection_reason, audit reasoning) into `innerHTML`. All user-data cells now pass through `escapeHtml()`.
+- **Dashboard/tracker schema drift:** `dashboard.ts` used to run its own inline `CREATE TABLE` which didn't know about new columns. It now delegates schema creation + migration to `PopStateTracker`, so the dashboard and MCP server always agree on schema even if the dashboard is launched first against a legacy DB.
+
+### Changed
+- **Schema migration (upgrade-safe):** opening a legacy DB now (1) rebuilds `issued_seals` if it still has `card_number`/`cvv` columns (very-legacy path, preserves masked data); (2) adds `rejection_reason` if missing; (3) rewrites legacy `YYYY-MM-DD HH:MM:SS` timestamps to ISO 8601 Z format; (4) creates `audit_log` table. Migration is idempotent.
+- **Dashboard port 3210:** no functional change, but documented: port was chosen arbitrarily during initial dashboard bring-up and is kept for continuity with existing user bookmarks.
+
 ## [0.3.3] - 2026-04-09
 
 ### Fixed

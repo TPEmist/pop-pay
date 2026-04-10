@@ -513,6 +513,18 @@ server.tool(
     reasoning: z.string().optional().describe("Why billing info is needed"),
   },
   async ({ target_vendor, page_url, reasoning }) => {
+    // Audit log: record every purchaser_info request so operators can trace
+    // what vendors an agent tried to pay. Does NOT block the call.
+    try {
+      client.stateTracker.recordAuditEvent(
+        "purchaser_info_requested",
+        target_vendor,
+        reasoning ?? null,
+      );
+    } catch {
+      // Audit failure must never block the main flow.
+    }
+
     // Security scan (same pattern as request_virtual_card)
     let scanNote = "";
     if (page_url) {

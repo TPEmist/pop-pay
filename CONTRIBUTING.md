@@ -52,6 +52,27 @@ npm run lint
 3. Verify tests and linting pass.
 4. Submit a Pull Request with a clear description of the changes and the problem they solve.
 
+### Schema Changes
+
+`PopStateTracker` (`src/core/state.ts`) is the single source of truth for the SQLite schema. The dashboard (`src/dashboard.ts`) delegates all table creation and migration to `PopStateTracker` on startup — it does **not** run its own `CREATE TABLE` statements against `issued_seals` or `audit_log`. If you add or modify a column:
+
+1. Update the `CREATE TABLE` in the `PopStateTracker` constructor so fresh DBs get the new shape.
+2. Add a migration branch next to the existing ones (add-column / rebuild) so legacy DBs upgrade in place. **Migrations must be idempotent** — running them on an already-migrated DB must be a no-op.
+3. Use ISO 8601 UTC with a `Z` suffix for all timestamps (`new Date().toISOString()`). Do **not** use SQLite `CURRENT_TIMESTAMP`, which is ambiguous about timezone and parses as local time in browsers.
+4. Add a regression test in `tests/audit-and-migration.test.ts` that constructs a pre-change DB, opens it with `PopStateTracker`, and asserts the new shape.
+
+### DB Path Consistency
+
+`PopClient` and the dashboard must point at the same SQLite file, or the dashboard will read from an empty DB while the MCP server writes somewhere else (this was the root cause of the v0.4.x "dashboard always shows $0" bug). When no explicit `dbPath` is passed, **always** construct `PopStateTracker` with no arguments so it uses `DEFAULT_DB_PATH` (`~/.config/pop-pay/pop_state.db`). Never hardcode a relative path like `"pop_state.db"` as a default — that resolves against the process CWD and diverges depending on where the MCP server was launched from.
+
+### Dashboard Port
+
+The local dashboard listens on **port 3210** by default. This number was chosen arbitrarily during initial bring-up; it has no special meaning and is kept stable so existing user bookmarks continue to work. Override with the `--port` flag if you need to run multiple dashboards side-by-side.
+
+### Dashboard UI (`dashboard/dashboard.js`)
+
+All user-controlled values (seal IDs, vendor strings, rejection reasons, audit reasoning) must be rendered through `escapeHtml()` before being inserted via `innerHTML`. Never interpolate raw DB values into template strings — they pass through agent reasoning and are an XSS sink.
+
 ## Architecture Overview
 
 `pop-pay` is structured into several key layers:

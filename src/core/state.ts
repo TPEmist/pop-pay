@@ -71,6 +71,10 @@ export class PopStateTracker {
     }
   }
 
+  private utcNowIso(): string {
+    return new Date().toISOString();
+  }
+
   private initDb(): void {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS daily_budget (
@@ -86,15 +90,25 @@ export class PopStateTracker {
         status TEXT,
         masked_card TEXT,
         expiration_date TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        timestamp TEXT NOT NULL,
+        rejection_reason TEXT
+      )
+    `);
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        vendor TEXT,
+        reasoning TEXT,
+        timestamp TEXT NOT NULL
       )
     `);
     this.migrateSchema();
   }
 
   private migrateSchema(): void {
-    const columns = this.db.prepare("PRAGMA table_info(issued_seals)").all() as any[];
-    const columnNames = new Set(columns.map((c) => c.name));
+    let columns = this.db.prepare("PRAGMA table_info(issued_seals)").all() as any[];
+    let columnNames = new Set(columns.map((c) => c.name));
 
     if (columnNames.has("card_number") || columnNames.has("cvv")) {
       // Add masked_card column if not already present
@@ -108,7 +122,7 @@ export class PopStateTracker {
           "WHERE masked_card IS NULL AND card_number IS NOT NULL"
         );
       }
-      // Recreate table without card_number and cvv columns (SQLite cannot DROP COLUMN pre-3.35)
+      // Recreate table without card_number and cvv columns, using the new schema
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS issued_seals_new (
           seal_id TEXT PRIMARY KEY,
@@ -117,17 +131,40 @@ export class PopStateTracker {
           status TEXT,
           masked_card TEXT,
           expiration_date TEXT,
-          timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+          timestamp TEXT NOT NULL,
+          rejection_reason TEXT
         )
       `);
       this.db.exec(`
-        INSERT INTO issued_seals_new (seal_id, amount, vendor, status, masked_card, expiration_date, timestamp)
-        SELECT seal_id, amount, vendor, status, masked_card, expiration_date, timestamp
+        INSERT INTO issued_seals_new (seal_id, amount, vendor, status, masked_card, expiration_date, timestamp, rejection_reason)
+        SELECT seal_id, amount, vendor, status, masked_card, expiration_date, COALESCE(timestamp, '1970-01-01T00:00:00Z'), NULL
         FROM issued_seals
       `);
       this.db.exec("DROP TABLE issued_seals");
       this.db.exec("ALTER TABLE issued_seals_new RENAME TO issued_seals");
     }
+
+    // After legacy rebuild, or if no rebuild was needed, apply subsequent migrations.
+    columns = this.db.prepare("PRAGMA table_info(issued_seals)").all() as any[];
+    columnNames = new Set(columns.map((c) => c.name));
+
+    if (!columnNames.has("rejection_reason")) {
+      this.db.exec("ALTER TABLE issued_seals ADD COLUMN rejection_reason TEXT");
+    }
+    
+    // Normalize old timestamp format if present
+    this.db.exec(`UPDATE issued_seals SET timestamp = REPLACE(timestamp, ' ', 'T') || 'Z' WHERE timestamp NOT LIKE '%T%' AND timestamp IS NOT NULL AND timestamp != ''`);
+    
+    // Ensure audit log table exists (harmless if already created)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS audit_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_type TEXT NOT NULL,
+        vendor TEXT,
+        reasoning TEXT,
+        timestamp TEXT NOT NULL
+      )
+    `);
   }
 
   private getTodaySpent(): number {
@@ -161,15 +198,17 @@ export class PopStateTracker {
     vendor: string,
     status: string = "Issued",
     maskedCard: string | null = null,
-    expirationDate: string | null = null
+    expirationDate: string | null = null,
+    rejectionReason: string | null = null
   ): void {
     const encryptedMasked = this.encryptField(maskedCard);
+    const timestamp = this.utcNowIso();
     this.db
       .prepare(
-        `INSERT INTO issued_seals (seal_id, amount, vendor, status, masked_card, expiration_date)
-         VALUES (?, ?, ?, ?, ?, ?)`
+        `INSERT INTO issued_seals (seal_id, amount, vendor, status, masked_card, expiration_date, timestamp, rejection_reason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(sealId, amount, vendor, status, encryptedMasked, expirationDate);
+      .run(sealId, amount, vendor, status, encryptedMasked, expirationDate, timestamp, rejectionReason);
   }
 
   getSealMaskedCard(sealId: string): string {
@@ -198,6 +237,23 @@ export class PopStateTracker {
       .prepare("SELECT status FROM issued_seals WHERE seal_id = ?")
       .get(sealId) as { status: string } | undefined;
     return row?.status === "Used";
+  }
+
+  recordAuditEvent(eventType: string, vendor: string | null = null, reasoning: string | null = null): number {
+    const timestamp = this.utcNowIso();
+    const info = this.db
+      .prepare(
+        `INSERT INTO audit_log (event_type, vendor, reasoning, timestamp)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(eventType, vendor, reasoning, timestamp);
+    return Number(info.lastInsertRowid);
+  }
+
+  getAuditEvents(limit: number = 100): Array<{id: number; event_type: string; vendor: string | null; reasoning: string | null; timestamp: string}> {
+    return this.db
+      .prepare("SELECT id, event_type, vendor, reasoning, timestamp FROM audit_log ORDER BY timestamp DESC, id DESC LIMIT ?")
+      .all(limit) as any;
   }
 
   close(): void {

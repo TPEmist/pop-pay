@@ -5,9 +5,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const utilizationFillEl = document.getElementById('utilization-fill');
     const sealsBody = document.getElementById('seals-body');
     const rejectedBody = document.getElementById('rejected-body');
+    const auditBody = document.getElementById('audit-body');
     const refreshBtn = document.getElementById('refresh-btn');
     const maxBudgetInput = document.getElementById('max-daily-budget');
     const saveSettingsBtn = document.getElementById('save-settings');
+
+    const escapeHtml = (value) => {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    };
+
+    const formatTimestamp = (ts) => {
+        if (!ts) return '';
+        const d = new Date(ts);
+        return isNaN(d.getTime()) ? ts : d.toLocaleString();
+    };
 
     let sealsData = [];
 
@@ -20,19 +37,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchData = async () => {
         try {
-            const [budgetRes, sealsRes, rejectedRes] = await Promise.all([
+            const [budgetRes, sealsRes, rejectedRes, auditRes] = await Promise.all([
                 fetch('/api/budget/today'),
                 fetch('/api/seals'),
-                fetch('/api/seals?status=rejected')
+                fetch('/api/seals?status=rejected'),
+                fetch('/api/audit')
             ]);
 
             const budget = await budgetRes.json();
             sealsData = await sealsRes.json();
             const rejected = await rejectedRes.json();
+            const audit = await auditRes.json();
 
             updateBudget(budget);
             renderSeals(sealsData);
             renderRejected(rejected);
+            renderAudit(audit);
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         }
@@ -63,12 +83,12 @@ document.addEventListener('DOMContentLoaded', () => {
         seals.forEach(seal => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${seal.seal_id}</td>
+                <td>${escapeHtml(seal.seal_id)}</td>
                 <td>${formatCurrency(seal.amount)}</td>
-                <td>${seal.vendor}</td>
-                <td style="color: ${getStatusColor(seal.status)}">${seal.status}</td>
-                <td>${seal.masked_card || 'N/A'}</td>
-                <td>${new Date(seal.timestamp).toLocaleString()}</td>
+                <td>${escapeHtml(seal.vendor)}</td>
+                <td style="color: ${getStatusColor(seal.status)}">${escapeHtml(seal.status)}</td>
+                <td>${escapeHtml(seal.masked_card || 'N/A')}</td>
+                <td>${escapeHtml(formatTimestamp(seal.timestamp))}</td>
             `;
             sealsBody.appendChild(row);
         });
@@ -79,13 +99,29 @@ document.addEventListener('DOMContentLoaded', () => {
         rejected.forEach(seal => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${seal.seal_id}</td>
+                <td>${escapeHtml(seal.seal_id)}</td>
                 <td>${formatCurrency(seal.amount)}</td>
-                <td>${seal.vendor}</td>
-                <td>${seal.status}</td>
-                <td>${new Date(seal.timestamp).toLocaleString()}</td>
+                <td>${escapeHtml(seal.vendor)}</td>
+                <td>${escapeHtml(seal.rejection_reason || '')}</td>
+                <td>${escapeHtml(formatTimestamp(seal.timestamp))}</td>
             `;
             rejectedBody.appendChild(row);
+        });
+    };
+
+    const renderAudit = (events) => {
+        if (!auditBody) return;
+        auditBody.innerHTML = '';
+        events.forEach(event => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${escapeHtml(event.id)}</td>
+                <td>${escapeHtml(event.event_type)}</td>
+                <td>${escapeHtml(event.vendor || '')}</td>
+                <td>${escapeHtml(event.reasoning || '')}</td>
+                <td>${escapeHtml(formatTimestamp(event.timestamp))}</td>
+            `;
+            auditBody.appendChild(row);
         });
     };
 

@@ -14,11 +14,16 @@ export class PopClient {
     provider: VirtualCardProvider,
     policy: GuardrailPolicy,
     engine?: GuardrailEngine,
-    dbPath: string = "pop_state.db"
+    dbPath?: string
   ) {
     this.provider = provider;
     this.policy = policy;
-    this.stateTracker = new PopStateTracker(dbPath);
+    // When dbPath is undefined, PopStateTracker uses its own DEFAULT_DB_PATH
+    // (~/.config/pop-pay/pop_state.db) — same path as the dashboard reader.
+    // Passing a hardcoded relative default here caused the MCP server to write
+    // to ./pop_state.db in the CWD while the dashboard read from ~/.config,
+    // which is why npm dashboard "today spending" was stuck at $0.
+    this.stateTracker = dbPath ? new PopStateTracker(dbPath) : new PopStateTracker();
     this.engine = engine ?? new GuardrailEngine();
   }
 
@@ -34,7 +39,15 @@ export class PopClient {
         status: "Rejected",
         rejectionReason: "Daily budget exceeded",
       };
-      this.stateTracker.recordSeal(seal.sealId, seal.authorizedAmount, intent.targetVendor, seal.status);
+      this.stateTracker.recordSeal(
+        seal.sealId,
+        seal.authorizedAmount,
+        intent.targetVendor,
+        seal.status,
+        null,
+        null,
+        seal.rejectionReason,
+      );
       return seal;
     }
 
@@ -50,7 +63,15 @@ export class PopClient {
         status: "Rejected",
         rejectionReason: reason,
       };
-      this.stateTracker.recordSeal(seal.sealId, seal.authorizedAmount, intent.targetVendor, seal.status);
+      this.stateTracker.recordSeal(
+        seal.sealId,
+        seal.authorizedAmount,
+        intent.targetVendor,
+        seal.status,
+        null,
+        null,
+        seal.rejectionReason,
+      );
       return seal;
     }
 
@@ -70,7 +91,8 @@ export class PopClient {
       intent.targetVendor,
       seal.status,
       maskedCard,
-      seal.expirationDate
+      seal.expirationDate,
+      seal.rejectionReason,
     );
 
     if (seal.status !== "Rejected") {
