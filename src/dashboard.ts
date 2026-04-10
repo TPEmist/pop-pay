@@ -49,7 +49,7 @@ export async function main(options: DashboardOptions & { skipOpen?: boolean }) {
         filePath = filePath.replace("/dashboard/", "/");
       }
       
-      const fullPath = path.join(process.cwd(), "dashboard", filePath);
+      const fullPath = path.join(__dirname, "..", "dashboard", filePath);
       
       if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
         const ext = path.extname(fullPath);
