@@ -67,7 +67,7 @@ npm run lint
 
 ### Dashboard Port
 
-The local dashboard listens on **port 3210** by default. This number was chosen arbitrarily during initial bring-up; it has no special meaning and is kept stable so existing user bookmarks continue to work. Override with the `--port` flag if you need to run multiple dashboards side-by-side.
+The local dashboard listens on **port 8860** by default (changed from 3210 in v0.5.1). 8860 was chosen because it is less commonly occupied by other local-dev tooling than 3xxx ports, and it ties into the "pay" brand root. Override with the `--port` flag if you need to run multiple dashboards side-by-side.
 
 ### Dashboard UI (`dashboard/dashboard.js`)
 

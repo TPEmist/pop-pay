@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-04-10
+
+### Changed
+- **Dashboard default port 3210 → 8860.** 8860 is less commonly occupied by other local-dev tooling than 3xxx ports, and ties into the "pay" brand root. Override with `--port` as before. Users running the dashboard with no explicit `--port` will need to update bookmarks to `http://localhost:8860`.
+
 ## [0.5.0] - 2026-04-10
 
 ### Added

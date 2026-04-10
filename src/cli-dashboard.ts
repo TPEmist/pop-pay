@@ -8,7 +8,7 @@ const DEFAULT_DB_PATH = path.join(os.homedir(), ".config", "pop-pay", "pop_state
 function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
-    port: 3210,
+    port: 8860,
     dbPath: DEFAULT_DB_PATH
   };
 
