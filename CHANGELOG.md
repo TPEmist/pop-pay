@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.4] - 2026-04-10
+
+### Fixed
+- **`mcpName` case mismatch with MCP Registry**: registry preserves GitHub org case (`100xPercent`), not lowercase. Updated `mcpName` from `io.github.100xpercent/pop-pay` to `io.github.100xPercent/pop-pay` so the npm-advertised MCP name matches the Official MCP Registry entry.
+
 ## [0.5.3] - 2026-04-10
 
 ### Changed
