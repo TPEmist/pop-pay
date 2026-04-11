@@ -8,7 +8,7 @@ At Point One Percent, we take the security of our runtime payment guardrails ser
 
 Please do **not** report security vulnerabilities via public GitHub issues.
 
-1. **GitHub Security Advisories**: Use the [GitHub Security Advisory](https://github.com/TPEmist/pop-pay/security/advisories/new) reporting tool to submit a report privately.
+1. **GitHub Security Advisories**: Use the [GitHub Security Advisory](https://github.com/100xPercent/pop-pay/security/advisories/new) reporting tool to submit a report privately.
 2. **Email**: If you prefer, email us at [security@pop-pay.dev](mailto:security@pop-pay.dev).
 
 ## Scope

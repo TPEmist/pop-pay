@@ -180,7 +180,7 @@ POP_ALLOWED_PAYMENT_PROCESSORS=["checkout.mybank.com", "pay.myprocessor.io"]
 ```
 
 > **Want to add a processor to the built-in list?**
-> Open a PR at `github.com/TPEmist/pop-pay` — include the processor name,
+> Open a PR at `github.com/100xPercent/pop-pay` — include the processor name,
 > domain, and one or two example vendors that use it.
 
 ---

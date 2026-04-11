@@ -1,0 +1,26 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      POP_CDP_URL:
+        type: string
+        default: "http://localhost:9222"
+      POP_ALLOWED_CATEGORIES:
+        type: string
+        default: '["aws","cloudflare"]'
+      POP_MAX_PER_TX:
+        type: number
+        default: 100.0
+      POP_MAX_DAILY:
+        type: number
+        default: 500.0
+      POP_GUARDRAIL_ENGINE:
+        type: string
+        default: "keyword"
+  commandFunction: |
+    (config) => ({
+      command: "npx",
+      args: ["-y", "pop-pay", "launch-mcp"],
+      env: config
+    })

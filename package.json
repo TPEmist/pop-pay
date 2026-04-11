@@ -1,6 +1,7 @@
 {
   "name": "pop-pay",
-  "version": "0.5.2",
+  "version": "0.5.3",
+  "mcpName": "io.github.100xpercent/pop-pay",
   "description": "Point One Percent - Semantic Payment Guardrail for AI Agents. It only takes 0.1% of hallucination to drain 100% of your wallet.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -36,11 +37,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TPEmist/pop-pay.git"
+    "url": "git+https://github.com/100xPercent/pop-pay.git"
   },
-  "homepage": "https://github.com/TPEmist/pop-pay#readme",
+  "homepage": "https://github.com/100xPercent/pop-pay#readme",
   "bugs": {
-    "url": "https://github.com/TPEmist/pop-pay/issues"
+    "url": "https://github.com/100xPercent/pop-pay/issues"
   },
   "engines": {
     "node": ">=18.0.0"

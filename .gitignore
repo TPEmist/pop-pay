@@ -25,3 +25,9 @@ coverage/
 
 # State
 *.db
+
+# MCP Publisher secrets & binary — NEVER commit
+.mcpregistry_github_token
+.mcpregistry_registry_token
+mcp-publisher
+.bg-shell/

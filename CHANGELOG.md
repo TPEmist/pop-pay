@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2026-04-10
+
+### Changed
+- **MCP marketplace listing metadata**: added `mcpName: io.github.100xpercent/pop-pay` to package.json for Official MCP Registry discovery, added `smithery.yaml` config schema for Smithery listing, bundled `assets/logo-400x400.png` for marketplace display.
+- **GitHub org migration**: updated repository, homepage, bugs, README badges, SECURITY advisory link, and docs references from `TPEmist/pop-pay` to `100xPercent/pop-pay`.
+
 ## [0.5.2] - 2026-04-10
 
 ### Fixed
